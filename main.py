@@ -4,10 +4,11 @@ from zoneinfo import ZoneInfo
 
 import feedparser
 import requests
-from anthropic import Anthropic
+from openai import OpenAI
 
 # ---------- تنظیمات ----------
-MODEL = os.getenv("AI_MODEL", "claude-sonnet-5-5")
+MODEL = os.getenv("AI_MODEL") or "gpt-4o-mini"
+BASE_URL = os.getenv("AI_BASE_URL") or "https://api.openai.com/v1"
 TOP_N = int(os.getenv("TOP_N", "7"))
 HOURS = int(os.getenv("HOURS", "26"))
 
@@ -70,14 +71,18 @@ def analyze(items):
 4. فقط JSON معتبر برگردان، بدون هیچ متن اضافه:
 [{{"id": <شماره خبر>, "title": "...", "summary": "...", "analysis": "..."}}]"""
 
-    client = Anthropic()  # ANTHROPIC_API_KEY از محیط خوانده می‌شود
-    resp = client.messages.create(
+    client = OpenAI(api_key=os.environ["AI_API_KEY"], base_url=BASE_URL)
+    resp = client.chat.completions.create(
         model=MODEL,
         max_tokens=4000,
-        system="تو تحلیلگر ارشد اخبار خاورمیانه هستی. دقیق، بی‌طرف و مختصر می‌نویسی.",
-        messages=[{"role": "user", "content": prompt}],
+        temperature=0.3,
+        messages=[
+            {"role": "system", "content": "تو تحلیلگر ارشد اخبار خاورمیانه هستی. دقیق، بی‌طرف و مختصر می‌نویسی."},
+            {"role": "user", "content": prompt},
+        ],
     )
-    text = "".join(b.text for b in resp.content if b.type == "text")
+    text = resp.choices[0].message.content or ""
+    text = re.sub(r"<think>.*?</think>", "", text, flags=re.S)  # برای مدل‌های reasoning
     m = re.search(r"\[.*\]", text, re.S)
     data = json.loads(m.group(0))
     out = []
