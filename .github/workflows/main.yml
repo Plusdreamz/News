@@ -1,8 +1,9 @@
 name: Daily Iran News
 
 on:
-  schedule:
-    - cron: "30 3 * * *"
+    schedule:
+    - cron: "17 3 * * *"
+    - cron: "47 4 * * *"
   workflow_dispatch: {}
 
 jobs:
